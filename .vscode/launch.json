@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug xv-6 kernel",
+            "type": "cppdbg",
+            "request": "launch",
+            // Correct path to the kernel file
+            "program": "${workspaceFolder}/xv6/xv6-riscv/kernel/kernel",
+            // Set the working directory to the xv6 root
+            "cwd": "${workspaceFolder}/xv6/xv6-riscv",
+            "miDebuggerPath": "/home/linuxbrew/.linuxbrew/bin/riscv64-elf-gdb", 
+            "miDebuggerServerAddress": "127.0.0.1:26000", 
+            "MIMode": "gdb",
+            "stopAtEntry": true,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": false
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+rm -f src/cmd_exec.o src/main.o src/exotic/activities.o src/exotic/bg.o src/exotic/fg.o src/exotic/ping.o src/exotic/signals.o src/flow/execution.o src/flow/jobs.o src/input/input.o src/input/parser.o src/input/prompt.o src/intrinsics/hop.o src/intrinsics/log.o src/intrinsics/reveal.o src/redirect/input_redirect.o src/redirect/output_redirect.o src/redirect/pipe.o ./shell.out
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/cmd_exec.c -o src/cmd_exec.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/main.c -o src/main.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/exotic/activities.c -o src/exotic/activities.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/exotic/bg.c -o src/exotic/bg.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/exotic/fg.c -o src/exotic/fg.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/exotic/ping.c -o src/exotic/ping.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/exotic/signals.c -o src/exotic/signals.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/flow/execution.c -o src/flow/execution.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/flow/jobs.c -o src/flow/jobs.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/input/input.c -o src/input/input.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/input/parser.c -o src/input/parser.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/input/prompt.c -o src/input/prompt.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/intrinsics/hop.c -o src/intrinsics/hop.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/intrinsics/log.c -o src/intrinsics/log.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/intrinsics/reveal.c -o src/intrinsics/reveal.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/redirect/input_redirect.c -o src/redirect/input_redirect.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/redirect/output_redirect.c -o src/redirect/output_redirect.o
+gcc -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm -Iinclude -c src/redirect/pipe.c -o src/redirect/pipe.o
+gcc src/cmd_exec.o src/main.o src/exotic/activities.o src/exotic/bg.o src/exotic/fg.o src/exotic/ping.o src/exotic/signals.o src/flow/execution.o src/flow/jobs.o src/input/input.o src/input/parser.o src/input/prompt.o src/intrinsics/hop.o src/intrinsics/log.o src/intrinsics/reveal.o src/redirect/input_redirect.o src/redirect/output_redirect.o src/redirect/pipe.o -o shell.out -std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm

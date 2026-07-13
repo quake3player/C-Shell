@@ -1,0 +1,14 @@
+{
+    "test_id": "test_75",
+    "section": "C.2",
+    "description": "Tests input redirection without a space between the operator and the filename.",
+    "passed": false,
+    "failure": {
+        "step_index": 0,
+        "command": "cat <test/file4.txt",
+        "reason": "Insufficient output lines for sequential check.",
+        "expected": 4,
+        "actual": 1
+    },
+    "score": 0.0
+}

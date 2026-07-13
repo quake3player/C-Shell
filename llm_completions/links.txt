@@ -1,0 +1,15 @@
+C-SHELL:
+1)Basic commands - https://g.co/gemini/share/d183eefc4146 , https://g.co/gemini/share/a14a83ba0c28
+2)Makefile - https://g.co/gemini/share/6ba114a231fa
+3)Pipelining - https://g.co/gemini/share/34298dfe708f
+4)Job Control - https://g.co/gemini/share/d8a68df1293d
+5)Bug Fixes - https://g.co/gemini/share/458b868e9ec4
+
+Networking:
+1)Handshakes and basic chat - https://g.co/gemini/share/85f29b5b71f0
+2)File transfer - https://g.co/gemini/share/608ea474a1b9
+3)Chat and lossy transfer bug fixes - https://g.co/gemini/share/85f29b5b71f0
+
+
+XV6:
+1)Read-count - https://g.co/gemini/share/86dcf176172d

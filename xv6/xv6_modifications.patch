@@ -1,0 +1,776 @@
+diff --git a/Makefile b/Makefile
+index 2d5f9e4..9809861 100644
+--- a/Makefile
++++ b/Makefile
+@@ -81,6 +81,16 @@ ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
+ CFLAGS += -fno-pie -nopie
+ endif
+ 
++# Scheduler selection
++ifeq ($(SCHEDULER),FCFS)
++CFLAGS += -DSCHED_FCFS
++$(info Building with FCFS scheduler)
++endif
++ifeq ($(SCHEDULER),CFS)
++CFLAGS += -DSCHED_CFS
++$(info Building with CFS scheduler)
++endif
++
+ LDFLAGS = -z max-page-size=4096
+ 
+ $K/kernel: $(OBJS) $K/kernel.ld
+@@ -142,6 +152,10 @@ UPROGS=\
+        $U/_logstress\
+        $U/_forphan\
+        $U/_dorphan\
++       $U/_readcount\
++       $U/_testsched\
++       $U/_schedulertest\
++       $U/_nicetest\
+ 
+ fs.img: mkfs/mkfs README $(UPROGS)
+        mkfs/mkfs fs.img README $(UPROGS)
+diff --git a/kernel/file.c b/kernel/file.c
+index 8912b7e..57cff5d 100644
+--- a/kernel/file.c
++++ b/kernel/file.c
+@@ -19,10 +19,15 @@ struct {
+   struct file file[NFILE];
+ } ftable;
+ 
++uint read_count;
++struct spinlock read_count_lock;
++
+ void
+ fileinit(void)
+ {
+   initlock(&ftable.lock, "ftable");
++  initlock(&read_count_lock, "read_count");
++  read_count = 0;
+ }
+ 
+ // Allocate a file structure.
+@@ -126,6 +131,12 @@ fileread(struct file *f, uint64 addr, int n)
+     panic("fileread");
+   }
+ 
++  if (r > 0) {
++    acquire(&read_count_lock);
++    read_count += r;
++    release(&read_count_lock);
++  }
++
+   return r;
+ }
+ 
+diff --git a/kernel/proc.c b/kernel/proc.c
+index 9d6cf3f..b27db9e 100644
+--- a/kernel/proc.c
++++ b/kernel/proc.c
+@@ -26,6 +26,65 @@ extern char trampoline[]; // trampoline.S
+ // must be acquired before any p->lock.
+ struct spinlock wait_lock;
+ 
++#ifdef SCHED_CFS
++// CFS run queue (ordered by vruntime ascending)
++static struct spinlock cfs_rq_lock;
++static struct proc *cfs_rq_head = 0;
++static int cfs_log_enabled = 0; // start logging only after schedulertest appears
++
++// Enqueue RUNNABLE process into CFS run queue ordered by vruntime
++static void
++cfs_enqueue(struct proc *p)
++{
++  acquire(&cfs_rq_lock);
++  for(struct proc *it = cfs_rq_head; it; it = it->cfs_next) {
++    if(it == p){
++      release(&cfs_rq_lock);
++      return;
++    }
++  }
++  if(cfs_rq_head == 0 || p->vruntime < cfs_rq_head->vruntime) {
++    p->cfs_next = cfs_rq_head;
++    cfs_rq_head = p;
++  } else {
++    struct proc *prev = cfs_rq_head;
++    while(prev->cfs_next && prev->cfs_next->vruntime <= p->vruntime)
++      prev = prev->cfs_next;
++    p->cfs_next = prev->cfs_next;
++    prev->cfs_next = p;
++  }
++  release(&cfs_rq_lock);
++}
++#endif
++
++// weight lookup approximating Linux CFS (nice -20..19)
++#ifdef SCHED_CFS
++// weight = 1024 / (1.25 ^ nice)
++// nice range: -20 (highest priority) .. 19 (lowest)
++uint64
++compute_weight(int nice)
++{
++  // Use fixed-point to avoid floating point: 1.25 = 5/4.
++  // weight = 1024 / ((5/4)^nice) = 1024 * (4/5)^nice for nice>0, or * (5/4)^(-nice) for nice<0.
++  // We'll use 64-bit integer scaling with numerator/denominator accumulation.
++  uint64 w = 1024;
++  if(nice > 0){
++    for(int i=0;i<nice;i++){
++      // w *= 4/5
++      w = (w * 4 + 2) / 5; // rounding
++      if(w == 0) { w = 1; break; }
++    }
++  } else if(nice < 0){
++    for(int i=0;i< -nice;i++){
++      // w *= 5/4
++      w = (w * 5 + 2) / 4; // rounding
++    }
++  }
++  if(w < 1) w = 1;
++  return w;
++}
++#endif
++
+ // Allocate a page for each process's kernel stack.
+ // Map it high in memory, followed by an invalid
+ // guard page.
+@@ -51,6 +110,9 @@ procinit(void)
+   
+   initlock(&pid_lock, "nextpid");
+   initlock(&wait_lock, "wait_lock");
++#ifdef SCHED_CFS
++  initlock(&cfs_rq_lock, "cfs_rq");
++#endif
+   for(p = proc; p < &proc[NPROC]; p++) {
+       initlock(&p->lock, "proc");
+       p->state = UNUSED;
+@@ -124,6 +186,21 @@ allocproc(void)
+ found:
+   p->pid = allocpid();
+   p->state = USED;
++#ifdef SCHED_FCFS
++  acquire(&tickslock);
++  p->ctime = ticks;
++  release(&tickslock);
++#endif
++#ifdef SCHED_CFS
++  p->nice = 0;
++  p->weight = compute_weight(0);
++  p->vruntime = 0;
++  p->runtime_ticks = 0;
++  p->last_scheduled_tick = 0; // repurposed: runtime_ticks snapshot when scheduled
++  p->timeslice_remaining = 0;
++  p->need_resched = 0;
++  p->cfs_next = 0;
++#endif
+ 
+   // Allocate a trapframe page.
+   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+@@ -227,6 +304,9 @@ userinit(void)
+   p->cwd = namei("/");
+ 
+   p->state = RUNNABLE;
++#ifdef SCHED_CFS
++  cfs_enqueue(p); // ensure init is in run queue
++#endif
+ 
+   release(&p->lock);
+ }
+@@ -297,6 +377,9 @@ kfork(void)
+ 
+   acquire(&np->lock);
+   np->state = RUNNABLE;
++#ifdef SCHED_CFS
++  cfs_enqueue(np);
++#endif
+   release(&np->lock);
+ 
+   return pid;
+@@ -421,41 +504,110 @@ kwait(uint64 addr)
+ void
+ scheduler(void)
+ {
++#if !defined(SCHED_CFS)
+   struct proc *p;
++#endif
+   struct cpu *c = mycpu();
+ 
+   c->proc = 0;
+   for(;;){
+-    // The most recent process to run may have had interrupts
+-    // turned off; enable them to avoid a deadlock if all
+-    // processes are waiting. Then turn them back off
+-    // to avoid a possible race between an interrupt
+-    // and wfi.
+     intr_on();
+     intr_off();
+-
++#ifdef SCHED_FCFS
++    struct proc *earliest = 0;
++    for(p = proc; p < &proc[NPROC]; p++) {
++      acquire(&p->lock);
++      if(p->state == RUNNABLE) {
++        if(earliest == 0 || p->ctime < earliest->ctime) {
++          if(earliest) release(&earliest->lock);
++          earliest = p;
++          continue;
++        }
++      }
++      release(&p->lock);
++    }
++    if(earliest) {
++      earliest->state = RUNNING;
++      c->proc = earliest;
++      swtch(&c->context, &earliest->context);
++      c->proc = 0;
++      release(&earliest->lock);
++    } else {
++      asm volatile("wfi");
++    }
++#elif defined(SCHED_CFS)
++    // Completely Fair Scheduler using ordered run queue
++    // Constants
++    const int target_latency = 48; // ticks
++    const int min_granularity = 3; // ticks
++
++    acquire(&cfs_rq_lock);
++    if(cfs_rq_head == 0){
++      release(&cfs_rq_lock);
++      asm volatile("wfi");
++      continue;
++    }
++    // Enable logging once we see schedulertest in the queue
++    if(!cfs_log_enabled){
++      for(struct proc *chk = cfs_rq_head; chk; chk = chk->cfs_next){
++        if(strncmp(chk->name, "schedulertest", sizeof(chk->name)) == 0){
++          cfs_log_enabled = 1;
++          break;
++        }
++      }
++    }
++    int runnable_count = 0;
++    if(cfs_log_enabled){
++      printf("[Scheduler Tick]\n");
++      for(struct proc *it = cfs_rq_head; it; it = it->cfs_next){
++        runnable_count++;
++        printf("PID: %d | vRuntime: %lu\n", it->pid, it->vruntime);
++      }
++    } else {
++      for(struct proc *it = cfs_rq_head; it; it = it->cfs_next)
++        runnable_count++;
++    }
++    struct proc *best = cfs_rq_head;
++    cfs_rq_head = best->cfs_next;
++    best->cfs_next = 0;
++    if(cfs_log_enabled)
++      printf("--> Scheduling PID %d (lowest vRuntime)\n", best->pid);
++    release(&cfs_rq_lock);
++
++    if(runnable_count < 1) runnable_count = 1;
++    int slice = target_latency / runnable_count;
++    if(slice < min_granularity) slice = min_granularity;
++
++    acquire(&best->lock);
++    if(best->state != RUNNABLE){
++      release(&best->lock);
++      continue;
++    }
++    best->timeslice_remaining = slice;
++    best->need_resched = 0;
++    best->last_scheduled_tick = best->runtime_ticks; // snapshot
++    best->state = RUNNING;
++    c->proc = best;
++    swtch(&c->context, &best->context);
++    c->proc = 0;
++    release(&best->lock);
++#else
+     int found = 0;
+     for(p = proc; p < &proc[NPROC]; p++) {
+       acquire(&p->lock);
+       if(p->state == RUNNABLE) {
+-        // Switch to chosen process.  It is the process's job
+-        // to release its lock and then reacquire it
+-        // before jumping back to us.
+         p->state = RUNNING;
+         c->proc = p;
+         swtch(&c->context, &p->context);
+-
+-        // Process is done running for now.
+-        // It should have changed its p->state before coming back.
+         c->proc = 0;
+         found = 1;
+       }
+       release(&p->lock);
+     }
+     if(found == 0) {
+-      // nothing to run; stop running on this core until an interrupt.
+       asm volatile("wfi");
+     }
++#endif
+   }
+ }
+ 
+@@ -490,11 +642,29 @@ sched(void)
+ void
+ yield(void)
+ {
++#ifndef SCHED_CFS
+   struct proc *p = myproc();
+   acquire(&p->lock);
+   p->state = RUNNABLE;
+   sched();
+   release(&p->lock);
++#else
++  struct proc *p = myproc();
++  acquire(&p->lock);
++  p->state = RUNNABLE;
++  // Ensure vruntime always advances at least 1 per scheduling round.
++  // If no timer tick elapsed (runtime_ticks unchanged), bump by 1.
++  if(p->runtime_ticks == p->last_scheduled_tick){
++    p->vruntime += 1;
++  }
++  else {
++    // Even if ticks elapsed, add a tiny compensation to reduce tie frequency.
++    p->vruntime += 0; // no-op but placeholder for potential tuning
++  }
++  cfs_enqueue(p);
++  sched();
++  release(&p->lock);
++#endif
+ }
+ 
+ // A fork child's very first scheduling by scheduler()
+@@ -541,13 +711,6 @@ sleep(void *chan, struct spinlock *lk)
+ {
+   struct proc *p = myproc();
+   
+-  // Must acquire p->lock in order to
+-  // change p->state and then call sched.
+-  // Once we hold p->lock, we can be
+-  // guaranteed that we won't miss any wakeup
+-  // (wakeup locks p->lock),
+-  // so it's okay to release lk.
+-
+   acquire(&p->lock);  //DOC: sleeplock1
+   release(lk);
+ 
+@@ -577,6 +740,9 @@ wakeup(void *chan)
+       acquire(&p->lock);
+       if(p->state == SLEEPING && p->chan == chan) {
+         p->state = RUNNABLE;
++#ifdef SCHED_CFS
++        cfs_enqueue(p);
++#endif
+       }
+       release(&p->lock);
+     }
+@@ -681,7 +847,13 @@ procdump(void)
+       state = states[p->state];
+     else
+       state = "???";
++#ifdef SCHED_FCFS
++    printf("%d %s ctime=%u %s", p->pid, state, p->ctime, p->name);
++#elif defined(SCHED_CFS)
++    printf("%d %s vr=%lu nice=%d w=%lu %s", p->pid, state, p->vruntime, p->nice, p->weight, p->name);
++#else
+     printf("%d %s %s", p->pid, state, p->name);
++#endif
+     printf("\n");
+   }
+ }
+diff --git a/kernel/proc.h b/kernel/proc.h
+index d021857..d1ab3f4 100644
+--- a/kernel/proc.h
++++ b/kernel/proc.h
+@@ -104,4 +104,25 @@ struct proc {
+   struct file *ofile[NOFILE];  // Open files
+   struct inode *cwd;           // Current directory
+   char name[16];               // Process name (debugging)
++#ifdef SCHED_FCFS
++  uint ctime;                  // Creation time (in ticks) for FCFS
++#endif
++#ifdef SCHED_CFS
++  int nice;                    // nice value (-20..19)
++  uint64 weight;               // scheduling weight
++  uint64 vruntime;             // virtual runtime (scaled)
++  uint64 runtime_ticks;        // actual CPU ticks run
++  uint64 last_scheduled_tick;  // last tick when scheduled
++  uint timeslice_remaining;    // remaining ticks in current time slice
++  int need_resched;            // flag set by timer when slice expires
++  struct proc *cfs_next;       // run queue linkage
++#endif
+ };
++
++// Extern declarations for global process table and init process
++extern struct proc proc[NPROC];
++extern struct proc *initproc;
++
++#ifdef SCHED_CFS
++uint64 compute_weight(int nice);
++#endif
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 076d965..cb8d64d 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -101,6 +101,10 @@ extern uint64 sys_unlink(void);
+ extern uint64 sys_link(void);
+ extern uint64 sys_mkdir(void);
+ extern uint64 sys_close(void);
++extern uint64 sys_getreadcount(void);
++#ifdef SCHED_CFS
++extern uint64 sys_setnice(void);
++#endif
+ 
+ // An array mapping syscall numbers from syscall.h
+ // to the function that handles the system call.
+@@ -126,6 +130,10 @@ static uint64 (*syscalls[])(void) = {
+ [SYS_link]    sys_link,
+ [SYS_mkdir]   sys_mkdir,
+ [SYS_close]   sys_close,
++[SYS_getreadcount] sys_getreadcount,
++#ifdef SCHED_CFS
++[SYS_setnice] sys_setnice,
++#endif
+ };
+ 
+ void
+diff --git a/kernel/syscall.h b/kernel/syscall.h
+index 3dd926d..74231fe 100644
+--- a/kernel/syscall.h
++++ b/kernel/syscall.h
+@@ -20,3 +20,7 @@
+ #define SYS_link   19
+ #define SYS_mkdir  20
+ #define SYS_close  21
++#define SYS_getreadcount 22
++#ifdef SCHED_CFS
++#define SYS_setnice 23
++#endif
+diff --git a/kernel/sysproc.c b/kernel/sysproc.c
+index 3044d00..0559698 100644
+--- a/kernel/sysproc.c
++++ b/kernel/sysproc.c
+@@ -105,3 +105,41 @@ sys_uptime(void)
+   release(&tickslock);
+   return xticks;
+ }
++
++extern uint read_count;
++extern struct spinlock read_count_lock;
++
++uint64
++sys_getreadcount(void)
++{
++  uint r_count;
++  acquire(&read_count_lock);
++  r_count = read_count;
++  release(&read_count_lock);
++  return r_count;
++}
++
++#ifdef SCHED_CFS
++// setnice(pid, nice): set nice value for target process
++// returns 0 on success, -1 on error
++uint64
++sys_setnice(void)
++{
++  int pid, nice;
++  argint(0, &pid);
++  argint(1, &nice);
++  if(nice < -20 || nice > 19) return -1;
++  struct proc *p;
++  for(p = proc; p < &proc[NPROC]; p++){
++    acquire(&p->lock);
++    if(p->pid == pid) {
++      p->nice = nice;
++      p->weight = compute_weight(nice);
++      release(&p->lock);
++      return 0;
++    }
++    release(&p->lock);
++  }
++  return -1;
++}
++#endif
+diff --git a/kernel/trap.c b/kernel/trap.c
+index a41cd69..08e78f8 100644
+--- a/kernel/trap.c
++++ b/kernel/trap.c
+@@ -70,7 +70,7 @@ usertrap(void)
+     // ok
+   } else if((r_scause() == 15 || r_scause() == 13) &&
+             vmfault(p->pagetable, r_stval(), (r_scause() == 13)? 1 : 0) != 0) {
+-    // page fault on lazily-allocated page
++    // page fault handled
+   } else {
+     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
+     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
+@@ -81,8 +81,23 @@ usertrap(void)
+     kexit(-1);
+ 
+   // give up the CPU if this is a timer interrupt.
++#ifndef SCHED_FCFS
++#ifndef SCHED_CFS
+   if(which_dev == 2)
+     yield();
++#else
++  if(which_dev == 2) {
++    // for CFS, timer preemption if slice expired
++    struct proc *cp = myproc();
++    if(cp) {
++      // update runtime and vruntime handled in clockintr()
++      if(cp->timeslice_remaining == 0 || cp->need_resched) {
++        yield();
++      }
++    }
++  }
++#endif
++#endif
+ 
+   prepare_return();
+ 
+@@ -152,8 +167,19 @@ kerneltrap()
+   }
+ 
+   // give up the CPU if this is a timer interrupt.
++#ifndef SCHED_FCFS
++#ifndef SCHED_CFS
+   if(which_dev == 2 && myproc() != 0)
+     yield();
++#else
++  if(which_dev == 2 && myproc() != 0) {
++    struct proc *cp = myproc();
++    if(cp->timeslice_remaining == 0 || cp->need_resched) {
++      yield();
++    }
++  }
++#endif
++#endif
+ 
+   // the yield() may have caused some traps to occur,
+   // so restore trap registers for use by kernelvec.S's sepc instruction.
+@@ -170,7 +196,22 @@ clockintr()
+     wakeup(&ticks);
+     release(&tickslock);
+   }
+-
++#ifdef SCHED_CFS
++  struct proc *p = myproc();
++  if(p && p->state == RUNNING){
++    p->runtime_ticks++;
++    if(p->weight == 0) p->weight = 1;
++    uint64 delta = (1024ULL + p->weight/2) / p->weight; // scaled vruntime increment
++    if(delta < 1) delta = 1;
++    p->vruntime += delta;
++    if(p->timeslice_remaining > 0) {
++      p->timeslice_remaining--;
++      if(p->timeslice_remaining == 0) {
++        p->need_resched = 1; // request reschedule
++      }
++    }
++  }
++#endif
+   // ask for the next timer interrupt. this also clears
+   // the interrupt request. 1000000 is about a tenth
+   // of a second.
+diff --git a/report.md b/report.md
+new file mode 100644
+index 0000000..e69de29
+diff --git a/user/nicetest.c b/user/nicetest.c
+new file mode 100644
+index 0000000..702b11f
+--- /dev/null
++++ b/user/nicetest.c
+@@ -0,0 +1,36 @@
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++
++// nicetest: demonstrate effect of different nice values under CFS
++// Usage: just run (only meaningful with SCHEDULER=CFS build)
++// Spawns CPU-bound workers with varying nice values and prints their completion order and elapsed ticks.
++
++#define N 5
++int main() {
++#ifndef SCHED_CFS
++  printf("nicetest: rebuild with SCHEDULER=CFS to see effect.\n");
++  exit(0);
++#else
++  int nicevals[N] = {-10, -5, 0, 5, 10};
++  int start = uptime();
++  for(int i=0;i<N;i++) {
++    int pid = fork();
++    if(pid < 0) { printf("fork failed\n"); exit(1);} 
++    if(pid == 0) {
++      // child busy loop
++      volatile unsigned long x=0; 
++      for(long k=0;k<200000000;k++) x += k; 
++      int end = uptime();
++      printf("child with nice=%d pid=%d elapsed=%d\n", nicevals[i], getpid(), end-start);
++      exit(0);
++    } else {
++      setnice(pid, nicevals[i]);
++    }
++  }
++  while(wait(0) > 0);
++  int total = uptime() - start;
++  printf("nicetest total=%d ticks\n", total);
++  exit(0);
++#endif
++}
+diff --git a/user/readcount.c b/user/readcount.c
+new file mode 100644
+index 0000000..e019fed
+--- /dev/null
++++ b/user/readcount.c
+@@ -0,0 +1,32 @@
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++
++int
++main(int argc, char *argv[])
++{
++  int initial_count = getreadcount();
++  printf("Initial read count: %d\n", initial_count);
++
++  // Open a file and read some data to increment the count
++  int fd = open("README", 0);
++  if (fd < 0) {
++    printf("Cannot open README\n");
++    exit(1);
++  }
++
++  char buf[100];
++  int n = read(fd, buf, sizeof(buf));
++  if (n < 0) {
++    printf("Read failed\n");
++    exit(1);
++  }
++
++  close(fd);
++
++  int final_count = getreadcount();
++  printf("Final read count: %d\n", final_count);
++  printf("Bytes read: %d\n", final_count - initial_count);
++
++  exit(0);
++}
+diff --git a/user/schedulertest.c b/user/schedulertest.c
+new file mode 100644
+index 0000000..b736415
+--- /dev/null
++++ b/user/schedulertest.c
+@@ -0,0 +1,37 @@
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++
++// Simple scheduler test: mix of IO-bound (sleep) and CPU-bound workers.
++// Collect turnaround times.
++
++#define NPROC 8
++#define IO_PROC 3
++
++int main() {
++  int start = uptime();
++  for(int i=0;i<NPROC;i++) {
++    int pid = fork();
++    if(pid < 0) {
++      printf("fork failed\n");
++      exit(1);
++    }
++    if(pid == 0) {
++      int s = uptime();
++      if(i < IO_PROC) {
++        pause(50); // IO-bound (sleep)
++      } else {
++        volatile unsigned x=0;
++        for(long k=0;k<150000000; k++) x += k;
++      }
++      int e = uptime();
++      printf("child %d pid=%d elapsed=%d\n", i, getpid(), e - s);
++      exit(0);
++    }
++  }
++  // Wait all
++  while(wait(0) > 0);
++  int end = uptime();
++  printf("schedulertest total elapsed=%d ticks\n", end-start);
++  exit(0);
++}
+diff --git a/user/testsched.c b/user/testsched.c
+new file mode 100644
+index 0000000..1c44bdf
+--- /dev/null
++++ b/user/testsched.c
+@@ -0,0 +1,26 @@
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++
++int main(void) { 
++    int n = 4; 
++    printf("testsched: starting %d children\n", n);
++    for(int i=0;i<n;i++){ 
++        int pid = fork(); 
++        if(pid==0){ 
++            int start = uptime(); 
++            volatile unsigned x=0; 
++            // pure CPU work; large loop
++            for(long k=0;k<200000000; k++) {
++                x += k; // prevent optimization
++            }
++            int end = uptime(); 
++            printf("child pid=%d total_ticks=%d\n", getpid(), end-start); 
++            exit(0); 
++        } 
++    } 
++    // parent waits all
++    while(wait(0)>0); 
++    printf("testsched: done\n");
++    exit(0); 
++}
+diff --git a/user/user.h b/user/user.h
+index ac84de9..be50c99 100644
+--- a/user/user.h
++++ b/user/user.h
+@@ -24,6 +24,10 @@ int getpid(void);
+ char* sys_sbrk(int,int);
+ int pause(int);
+ int uptime(void);
++int getreadcount(void);
++#ifdef SCHED_CFS
++int setnice(int pid, int nice);
++#endif
+ 
+ // ulib.c
+ int stat(const char*, struct stat*);
+diff --git a/user/usys.pl b/user/usys.pl
+index c5d4c3a..3db2395 100755
+--- a/user/usys.pl
++++ b/user/usys.pl
+@@ -10,11 +10,11 @@ sub entry {
+     my $prefix = "sys_";
+     my $name = shift;
+     if ($name eq "sbrk") {
+-       print ".global $prefix$name\n";
+-       print "$prefix$name:\n";
++       print ".global ${prefix}${name}\n";
++       print "${prefix}${name}:\n";
+     } else {
+-       print ".global $name\n";
+-       print "$name:\n";
++       print ".global ${name}\n";
++       print "${name}:\n";
+     }
+     print " li a7, SYS_${name}\n";
+     print " ecall\n";
+@@ -42,3 +42,8 @@ entry("getpid");
+ entry("sbrk");
+ entry("pause");
+ entry("uptime");
++entry("getreadcount");
++# Conditionally compile setnice stub only when SCHED_CFS is defined
++print "#ifdef SCHED_CFS\n";
++entry("setnice");
++print "#endif\n";

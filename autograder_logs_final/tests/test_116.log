@@ -1,0 +1,80 @@
+{
+    "testcase": {
+        "section": "E.2",
+        "description": "Tests ping command with missing arguments.",
+        "cmds": [
+            {
+                "expect_exit": false,
+                "skip_prompt_check": false,
+                "cmd": "ping",
+                "sequential_outputs": [
+                    {
+                        "text": "Invalid syntax!",
+                        "is_re": false,
+                        "negative_match": false
+                    }
+                ],
+                "nonsequential_outputs": [],
+                "ignore_output": false,
+                "cwd_after": null
+            },
+            {
+                "expect_exit": false,
+                "skip_prompt_check": false,
+                "cmd": "ping 12345",
+                "sequential_outputs": [
+                    {
+                        "text": "Invalid syntax!",
+                        "is_re": false,
+                        "negative_match": false
+                    }
+                ],
+                "nonsequential_outputs": [],
+                "ignore_output": false,
+                "cwd_after": null
+            }
+        ],
+        "timeout": 2.0,
+        "strict_prompt": false,
+        "requires_test_folder": false
+    },
+    "events": [
+        {
+            "time": "2025-11-30T15:15:02.569772+05:30",
+            "type": "output",
+            "details": "<osnuser@osntesting:~> "
+        },
+        {
+            "time": "2025-11-30T15:15:02.570144+05:30",
+            "type": "input",
+            "details": "GenericCmd(expect_exit=False, skip_prompt_check=False, cmd='ping', sequential_outputs=[Line(text='Invalid syntax!', is_re=False, negative_match=False)], nonsequential_outputs=[], ignore_output=False, cwd_after=None)"
+        },
+        {
+            "time": "2025-11-30T15:15:02.621863+05:30",
+            "type": "output",
+            "details": "ping: Invalid Syntax!"
+        },
+        {
+            "time": "2025-11-30T15:15:02.622360+05:30",
+            "type": "output",
+            "details": "<osnuser@osntesting:~> "
+        },
+        {
+            "time": "2025-11-30T15:15:02.622639+05:30",
+            "type": "input",
+            "details": "GenericCmd(expect_exit=False, skip_prompt_check=False, cmd='ping 12345', sequential_outputs=[Line(text='Invalid syntax!', is_re=False, negative_match=False)], nonsequential_outputs=[], ignore_output=False, cwd_after=None)"
+        },
+        {
+            "time": "2025-11-30T15:15:02.674377+05:30",
+            "type": "output",
+            "details": "ping: Invalid Syntax!"
+        },
+        {
+            "time": "2025-11-30T15:15:02.674933+05:30",
+            "type": "output",
+            "details": "<osnuser@osntesting:~> "
+        }
+    ],
+    "raw_log": "##### START RAW OUTPUT #####\n<osnuser@osntesting:~> ping\nping: Invalid Syntax!\r\n<osnuser@osntesting:~> ping 12345\nping: Invalid Syntax!\r\n<osnuser@osntesting:~> ",
+    "py_log": "2025-11-30 15:15:01,789 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - INFO - Spawned child:\n    <pexpect.pty_spawn.spawn object at 0x70b0542e7c20>\n    command: /usr/bin/docker\n    args: [b'/usr/bin/docker', b'run', b'--name', b'tester_8dccbc52bbc14092a4d289db87215962', b'-i', b'-t', b'--rm', b'--init', b'-h', b'osntesting', b'-v', b'/tmp/tmpvs0lfg4e:/app', b'-w', b'/app', b'shell_tester:latest', b'/app/shell.out']\n    buffer (last 100 chars): ''\n    before (last 100 chars): ''\n    after: None\n    match: None\n    match_index: None\n    exitstatus: None\n    flag_eof: False\n    pid: 1238399\n    child_fd: 93\n    closed: False\n    timeout: 2.0\n    delimiter: <class 'pexpect.exceptions.EOF'>\n    logfile: <tester.FlexibleIO object at 0x70b054314280>\n    logfile_read: None\n    logfile_send: None\n    maxread: 2000\n    ignorecase: False\n    searchwindowsize: None\n    delaybeforesend: 0.05\n    delayafterclose: 0.1\n    delayafterterminate: 0.1\n2025-11-30 15:15:02,569 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.569772+05:30\",\n        \"type\": \"output\",\n        \"details\": \"<osnuser@osntesting:~> \"\n    }\n2025-11-30 15:15:02,570 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.570144+05:30\",\n        \"type\": \"input\",\n        \"details\": \"GenericCmd(expect_exit=False, skip_prompt_check=False, cmd='ping', sequential_outputs=[Line(text='Invalid syntax!', is_re=False, negative_match=False)], nonsequential_outputs=[], ignore_output=False, cwd_after=None)\"\n    }\n2025-11-30 15:15:02,622 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.621863+05:30\",\n        \"type\": \"output\",\n        \"details\": \"ping: Invalid Syntax!\"\n    }\n2025-11-30 15:15:02,622 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.622360+05:30\",\n        \"type\": \"output\",\n        \"details\": \"<osnuser@osntesting:~> \"\n    }\n2025-11-30 15:15:02,622 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.622639+05:30\",\n        \"type\": \"input\",\n        \"details\": \"GenericCmd(expect_exit=False, skip_prompt_check=False, cmd='ping 12345', sequential_outputs=[Line(text='Invalid syntax!', is_re=False, negative_match=False)], nonsequential_outputs=[], ignore_output=False, cwd_after=None)\"\n    }\n2025-11-30 15:15:02,674 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.674377+05:30\",\n        \"type\": \"output\",\n        \"details\": \"ping: Invalid Syntax!\"\n    }\n2025-11-30 15:15:02,675 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-30T15:15:02.674933+05:30\",\n        \"type\": \"output\",\n        \"details\": \"<osnuser@osntesting:~> \"\n    }\n2025-11-30 15:15:03,410 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - WARNING - Failed to remove container tester_8dccbc52bbc14092a4d289db87215962: 409 Client Error for http+docker://localhost/v1.51/containers/b528e8a8b503b794ea1d305a6a02c329a92b8f27c1d4ec1d0cd94c46118ed033?v=False&link=False&force=True: Conflict (\"removal of container b528e8a8b503b794ea1d305a6a02c329a92b8f27c1d4ec1d0cd94c46118ed033 is already in progress\")\n2025-11-30 15:15:03,410 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - INFO - Finished running testcase. Child info at exit:\n    <pexpect.pty_spawn.spawn object at 0x70b0542e7c20>\n    command: /usr/bin/docker\n    args: [b'/usr/bin/docker', b'run', b'--name', b'tester_8dccbc52bbc14092a4d289db87215962', b'-i', b'-t', b'--rm', b'--init', b'-h', b'osntesting', b'-v', b'/tmp/tmpvs0lfg4e:/app', b'-w', b'/app', b'shell_tester:latest', b'/app/shell.out']\n    buffer (last 100 chars): ''\n    before (last 100 chars): ''\n    after: '<osnuser@osntesting:~> '\n    match: <re.Match object; span=(0, 23), match='<osnuser@osntesting:~> '>\n    match_index: 0\n    exitstatus: None\n    flag_eof: False\n    pid: 1238399\n    child_fd: -1\n    closed: True\n    timeout: 2.0\n    delimiter: <class 'pexpect.exceptions.EOF'>\n    logfile: <tester.FlexibleIO object at 0x70b054314280>\n    logfile_read: None\n    logfile_send: None\n    maxread: 2000\n    ignorecase: False\n    searchwindowsize: None\n    delaybeforesend: 0.05\n    delayafterclose: 0.1\n    delayafterterminate: 0.1\n2025-11-30 15:15:03,410 - tester.b3af5dba-7094-4f10-b17d-fd3ef92a135a - INFO - Cleaned up temp_dir: /tmp/tmpvs0lfg4e\n"
+}

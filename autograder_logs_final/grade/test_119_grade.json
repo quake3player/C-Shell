@@ -1,0 +1,14 @@
+{
+    "test_id": "test_119",
+    "section": "E.3",
+    "description": "Tests that Ctrl+D kills background jobs before exiting.",
+    "passed": false,
+    "failure": {
+        "step_index": 1,
+        "command": "Ctrl+d",
+        "reason": "Expected EOF from child.",
+        "expected": "EventType.EOF",
+        "actual": "EventType.EOF"
+    },
+    "score": 0.0
+}

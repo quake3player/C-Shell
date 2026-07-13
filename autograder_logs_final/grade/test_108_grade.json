@@ -1,0 +1,8 @@
+{
+    "test_id": "test_108",
+    "section": "D.2",
+    "description": "Tests that a background process is correctly detached from terminal input, causing it to receive an immediate EOF.",
+    "passed": true,
+    "failure": null,
+    "score": 1.0
+}

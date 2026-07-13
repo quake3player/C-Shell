@@ -1,0 +1,14 @@
+{
+    "test_id": "test_121",
+    "section": "E.4",
+    "description": "Tests that running 'bg' on an already running job produces an error.",
+    "passed": false,
+    "failure": {
+        "step_index": 1,
+        "command": "bg 1",
+        "reason": "Mismatch at sequential line 0",
+        "expected": "Job already running",
+        "actual": "bg: job already running"
+    },
+    "score": 0.0
+}

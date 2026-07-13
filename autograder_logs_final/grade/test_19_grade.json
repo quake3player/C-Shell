@@ -1,0 +1,14 @@
+{
+    "test_id": "test_19",
+    "section": "A.3",
+    "description": "Tests for 'Invalid Syntax!' where an input redirection is immediately followed by a pipe.",
+    "passed": false,
+    "failure": {
+        "step_index": 0,
+        "command": "a < | b",
+        "reason": "Mismatch at sequential line 0",
+        "expected": "Invalid Syntax!",
+        "actual": "Command not found!"
+    },
+    "score": 0.0
+}

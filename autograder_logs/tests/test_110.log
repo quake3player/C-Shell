@@ -1,0 +1,78 @@
+{
+    "testcase": {
+        "section": "E.1",
+        "description": "Checks if activities correctly lists a single running background process.",
+        "cmds": [
+            {
+                "expect_exit": false,
+                "cmd": "sleep 2 &",
+                "sequential_outputs": [],
+                "nonsequential_outputs": [
+                    {
+                        "text": "\\\\[1\\\\] \\\\d+",
+                        "is_re": true,
+                        "negative_match": false
+                    }
+                ],
+                "ignore_output": true,
+                "cwd_after": null
+            },
+            {
+                "expect_exit": false,
+                "cmd": "activities",
+                "sequential_outputs": [
+                    {
+                        "text": "\\\\[\\\\d+\\\\] : sleep - Running",
+                        "is_re": true,
+                        "negative_match": false
+                    }
+                ],
+                "nonsequential_outputs": [],
+                "ignore_output": false,
+                "cwd_after": null
+            }
+        ],
+        "timeout": 2.0,
+        "strict_prompt": false,
+        "requires_test_folder": false
+    },
+    "events": [
+        {
+            "time": "2025-11-19T22:20:33.894047+05:30",
+            "type": "output",
+            "details": "<osnuser@osntesting:~> "
+        },
+        {
+            "time": "2025-11-19T22:20:33.894342+05:30",
+            "type": "input",
+            "details": "GenericCmd(expect_exit=False, cmd='sleep 2 &', sequential_outputs=[], nonsequential_outputs=[Line(text='\\\\\\\\[1\\\\\\\\] \\\\\\\\d+', is_re=True, negative_match=False)], ignore_output=True, cwd_after=None)"
+        },
+        {
+            "time": "2025-11-19T22:20:33.945476+05:30",
+            "type": "output",
+            "details": "[1] 28"
+        },
+        {
+            "time": "2025-11-19T22:20:33.945706+05:30",
+            "type": "output",
+            "details": "<osnuser@osntesting:~> "
+        },
+        {
+            "time": "2025-11-19T22:20:33.945815+05:30",
+            "type": "input",
+            "details": "GenericCmd(expect_exit=False, cmd='activities', sequential_outputs=[Line(text='\\\\\\\\[\\\\\\\\d+\\\\\\\\] : sleep - Running', is_re=True, negative_match=False)], nonsequential_outputs=[], ignore_output=False, cwd_after=None)"
+        },
+        {
+            "time": "2025-11-19T22:20:33.997334+05:30",
+            "type": "output",
+            "details": "[28] : sleep 2 & - Running"
+        },
+        {
+            "time": "2025-11-19T22:20:33.997617+05:30",
+            "type": "output",
+            "details": "<osnuser@osntesting:~> "
+        }
+    ],
+    "raw_log": "##### START RAW OUTPUT #####\n<osnuser@osntesting:~> sleep 2 &\n[1] 28\r\n<osnuser@osntesting:~> activities\n[28] : sleep 2 & - Running\r\n<osnuser@osntesting:~> ",
+    "py_log": "2025-11-19 22:20:33,458 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - INFO - Spawned child:\n    <pexpect.pty_spawn.spawn object at 0x78f0175ee900>\n    command: /usr/bin/docker\n    args: [b'/usr/bin/docker', b'run', b'--name', b'tester_250c90d592514e159ca0c7d4ebd3db59', b'-i', b'-t', b'--rm', b'--init', b'-h', b'osntesting', b'-v', b'/tmp/tmp3vhss3ko:/app', b'-w', b'/app', b'shell_tester:latest', b'/app/shell.out']\n    buffer (last 100 chars): ''\n    before (last 100 chars): ''\n    after: None\n    match: None\n    match_index: None\n    exitstatus: None\n    flag_eof: False\n    pid: 532360\n    child_fd: 106\n    closed: False\n    timeout: 2.0\n    delimiter: <class 'pexpect.exceptions.EOF'>\n    logfile: <tester.FlexibleIO object at 0x78f014e2b4c0>\n    logfile_read: None\n    logfile_send: None\n    maxread: 2000\n    ignorecase: False\n    searchwindowsize: None\n    delaybeforesend: 0.05\n    delayafterclose: 0.1\n    delayafterterminate: 0.1\n2025-11-19 22:20:33,894 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.894047+05:30\",\n        \"type\": \"output\",\n        \"details\": \"<osnuser@osntesting:~> \"\n    }\n2025-11-19 22:20:33,894 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.894342+05:30\",\n        \"type\": \"input\",\n        \"details\": \"GenericCmd(expect_exit=False, cmd='sleep 2 &', sequential_outputs=[], nonsequential_outputs=[Line(text='\\\\\\\\\\\\\\\\[1\\\\\\\\\\\\\\\\] \\\\\\\\\\\\\\\\d+', is_re=True, negative_match=False)], ignore_output=True, cwd_after=None)\"\n    }\n2025-11-19 22:20:33,945 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.945476+05:30\",\n        \"type\": \"output\",\n        \"details\": \"[1] 28\"\n    }\n2025-11-19 22:20:33,945 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.945706+05:30\",\n        \"type\": \"output\",\n        \"details\": \"<osnuser@osntesting:~> \"\n    }\n2025-11-19 22:20:33,945 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.945815+05:30\",\n        \"type\": \"input\",\n        \"details\": \"GenericCmd(expect_exit=False, cmd='activities', sequential_outputs=[Line(text='\\\\\\\\\\\\\\\\[\\\\\\\\\\\\\\\\d+\\\\\\\\\\\\\\\\] : sleep - Running', is_re=True, negative_match=False)], nonsequential_outputs=[], ignore_output=False, cwd_after=None)\"\n    }\n2025-11-19 22:20:33,997 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.997334+05:30\",\n        \"type\": \"output\",\n        \"details\": \"[28] : sleep 2 & - Running\"\n    }\n2025-11-19 22:20:33,997 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - DEBUG - Received event:\n    {\n        \"time\": \"2025-11-19T22:20:33.997617+05:30\",\n        \"type\": \"output\",\n        \"details\": \"<osnuser@osntesting:~> \"\n    }\n2025-11-19 22:20:34,301 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - INFO - Finished running testcase. Child info at exit:\n    <pexpect.pty_spawn.spawn object at 0x78f0175ee900>\n    command: /usr/bin/docker\n    args: [b'/usr/bin/docker', b'run', b'--name', b'tester_250c90d592514e159ca0c7d4ebd3db59', b'-i', b'-t', b'--rm', b'--init', b'-h', b'osntesting', b'-v', b'/tmp/tmp3vhss3ko:/app', b'-w', b'/app', b'shell_tester:latest', b'/app/shell.out']\n    buffer (last 100 chars): ''\n    before (last 100 chars): ''\n    after: '<osnuser@osntesting:~> '\n    match: <re.Match object; span=(0, 23), match='<osnuser@osntesting:~> '>\n    match_index: 0\n    exitstatus: 129\n    flag_eof: False\n    pid: 532360\n    child_fd: -1\n    closed: True\n    timeout: 2.0\n    delimiter: <class 'pexpect.exceptions.EOF'>\n    logfile: <tester.FlexibleIO object at 0x78f014e2b4c0>\n    logfile_read: None\n    logfile_send: None\n    maxread: 2000\n    ignorecase: False\n    searchwindowsize: None\n    delaybeforesend: 0.05\n    delayafterclose: 0.1\n    delayafterterminate: 0.1\n2025-11-19 22:20:34,301 - tester.067088cf-cf9b-43d2-9113-b532495a7961 - INFO - Cleaned up temp_dir: /tmp/tmp3vhss3ko\n"
+}
