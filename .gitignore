@@ -1,0 +1,46 @@
+# Compiled output
+*.o
+*.a
+*.so
+*.out
+shell/shell.out
+
+# Build artifacts
+build/
+bin/
+obj/
+
+# Logs and runtime state
+*.log
+.shell_log
+
+# Test infrastructure
+autograder_logs/
+autograder_logs_final/
+llm_completions/
+tester.tar.gz
+__pycache__/
+.venv/
+requirements.txt
+._*
+
+# Networking compiled binaries
+networking/client
+networking/server
+networking/client.o
+networking/server.o
+networking/sham-utils.o
+
+# Python bytecode
+*.pyc
+*.pyo
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
